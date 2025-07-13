@@ -1,23 +1,32 @@
 import psycopg2 
 from psycopg2.extras import RealDictCursor
-from .config import Config
+from . import config
 
 class Database:
     """PostgreSQL manager"""
 
     def __init__(self):
-        self.config = Config()
-        self.init_database()
+        try:
+            self.init_database()
+            print("Database initialized successfully")
+        except Exception as e:
+            print(f"Database initialization error: {e}")
+            raise
 
     def get_connection(self):
         """Get database connection"""
-        return psycopg2.connect(
-            host=self.config.DB_HOST,
-            database=self.config.DB_NAME,
-            user=self.config.DB_USER,
-            password=self.config.DB_PASSWORD,
-            port=self.config.DB_PORT
-        )
+        try:
+            conn = psycopg2.connect(
+                host=config.DB_HOST,
+                database=config.DB_NAME,
+                user=config.DB_USER,
+                password=config.DB_PASSWORD,
+                port=config.DB_PORT
+            )
+            return conn
+        except Exception as e:
+            print(f"Database connection error: {e}")
+            raise
 
     def init_database(self):
         """Create tables"""
@@ -46,50 +55,69 @@ class Database:
         ''')
         
         conn.commit()
+        cursor.close()
         conn.close()
 
     def save_calculation(self, session_id, operation, first_number, second_number, result):
         """Save calculations to database"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
 
-        cursor.execute('''
-            INSERT INTO calculations (session_id, operation, first_number, second_number, result)
-            VALUES (%s, %s, %s, %s, %s)
-        ''', (session_id, operation, first_number, second_number, result))
-        
-        conn.commit()
-        conn.close()
+            cursor.execute('''
+                INSERT INTO calculations (session_id, operation, first_number, second_number, result)
+                VALUES (%s, %s, %s, %s, %s)
+            ''', (session_id, operation, first_number, second_number, result))
+            
+            conn.commit()
+            cursor.close()
+            conn.close()
+            print(f"Calculation saved: {operation} {first_number} {second_number} = {result}")
+        except Exception as e:
+            print(f"Error saving calculation: {e}")
+            raise
 
     def history(self, session_id, limit=10):
         """Calculation history"""
-        conn = self.get_connection()
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
-        
-        cursor.execute('''
-            SELECT operation, first_number, second_number, result, date
-            FROM calculations
-            WHERE session_id = %s
-            ORDER BY date DESC 
-            LIMIT %s
-        ''', (session_id, limit))
-        
-        results = cursor.fetchall()
-        conn.close()
-        return results
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            
+            cursor.execute('''
+                SELECT operation, first_number, second_number, result, date
+                FROM calculations
+                WHERE session_id = %s
+                ORDER BY date DESC 
+                LIMIT %s
+            ''', (session_id, limit))
+            
+            results = cursor.fetchall()
+            cursor.close()
+            conn.close()
+            print(f"Retrieved {len(results)} history records for session {session_id}")
+            return results
+        except Exception as e:
+            print(f"Error retrieving history: {e}")
+            return []
     
     def save_session(self, session_id, last_result):
         """Save session"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            INSERT INTO sessions (id, last_result, recently_used)
-            VALUES (%s, %s, CURRENT_TIMESTAMP)
-            ON CONFLICT (id) DO UPDATE SET
-                last_result = EXCLUDED.last_result,
-                recently_used = EXCLUDED.recently_used
-        ''', (session_id, last_result))
-        
-        conn.commit()
-        conn.close()
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                INSERT INTO sessions (id, last_result, recently_used)
+                VALUES (%s, %s, CURRENT_TIMESTAMP)
+                ON CONFLICT (id) DO UPDATE SET
+                    last_result = EXCLUDED.last_result,
+                    recently_used = EXCLUDED.recently_used
+            ''', (session_id, last_result))
+            
+            conn.commit()
+            cursor.close()
+            conn.close()
+            print(f"Session saved: {session_id} with result {last_result}")
+        except Exception as e:
+            print(f"Error saving session: {e}")
+            raise
