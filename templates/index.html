@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stranger Things Calculator</title>
+</head>
+<body>
+    <div class="calculator-container">
+        <h1>Hawkins Lab</h1>
+        <input type="text" class="display" id="display" readonly>
+        
+        <div class="buttons">
+            <button class="clear" onclick="clearDisplay()">C</button>
+            <button onclick="deleteLast()">←</button>
+            <button class="operator" onclick="handleOperator('/')">/</button>
+            <button class="operator" onclick="handleOperator('*')">×</button>
+            
+            <button onclick="appendToDisplay('7')">7</button>
+            <button onclick="appendToDisplay('8')">8</button>
+            <button onclick="appendToDisplay('9')">9</button>
+            <button class="operator" onclick="handleOperator('-')">-</button>
+            
+            <button onclick="appendToDisplay('4')">4</button>
+            <button onclick="appendToDisplay('5')">5</button>
+            <button onclick="appendToDisplay('6')">6</button>
+            <button class="operator" onclick="handleOperator('+')">+</button>
+            
+            <button onclick="appendToDisplay('1')">1</button>
+            <button onclick="appendToDisplay('2')">2</button>
+            <button onclick="appendToDisplay('3')">3</button>
+            
+            <button onclick="appendToDisplay('0')" style="grid-column: span 2;">0</button>
+            <button onclick="appendToDisplay('.')">.</button>
+            <button class="equals" onclick="calculate()" style="grid-row: span 2;">=</button>
+        </div>
+    </div>
+    
+    <script>
+        let display = document.getElementById('display');
+        let currentInput = '';
+        let pendingOperation = null;
+        let waitingForNewNumber = false;
+        
+        // Initialize calculator with current result from backend
+        window.onload = async function() {
+            await updateDisplayFromBackend();
+        };
+        
+        // Update display from backend result
+        async function updateDisplayFromBackend() {
+            try {
+                const response = await fetch('/api/result');
+                const data = await response.json();
+                if (data.status === 'success') {
+                    display.value = data.result.toString();
+                }
+            } catch (error) {
+                console.error('Error getting result from backend:', error);
+            }
+        }
+        
+        // Append number or decimal to display
+        function appendToDisplay(value) {
+            if (waitingForNewNumber) {
+                display.value = '';
+                waitingForNewNumber = false;
+            }
+            
+            // Handle decimal point
+            if (value === '.') {
+                if (display.value === '' || display.value.includes('.')) {
+                    return;
+                }
+            }
+            
+            display.value += value;
+        }
+        
+        // Handle operator buttons
+        async function handleOperator(op) {
+            if (display.value === '' && op !== '-') {
+                return;
+            }
+            
+            // If we have a pending operation, complete it first
+            if (pendingOperation && !waitingForNewNumber) {
+                await calculate();
+            }
+            
+            // Handle negative numbers
+            if (op === '-' && display.value === '') {
+                display.value = '-';
+                return;
+            }
+            
+            pendingOperation = op;
+            waitingForNewNumber = true;
+        }
+        
+        // Clear display and reset backend
+        async function clearDisplay() {
+            try {
+                await fetch('/api/reset', {method: 'POST'});
+                display.value = '';
+                currentInput = '';
+                pendingOperation = null;
+                waitingForNewNumber = false;
+                await updateDisplayFromBackend();
+            } catch (error) {
+                console.error('Error clearing:', error);
+                display.value = 'Error';
+            }
+        }
+        
+        // Delete last character
+        function deleteLast() {
+            if (display.value === 'Error') {
+                display.value = '';
+                return;
+            }
+            display.value = display.value.slice(0, -1);
+        }
+        
+        // Perform calculation using backend API
+        async function calculate() {
+            if (!pendingOperation || display.value === '' || waitingForNewNumber) {
+                return;
+            }
+            
+            const number = parseFloat(display.value);
+            if (isNaN(number)) {
+                display.value = 'Error';
+                return;
+            }
+            
+            try {
+                let endpoint;
+                switch (pendingOperation) {
+                    case '+':
+                        endpoint = '/api/add';
+                        break;
+                    case '-':
+                        endpoint = '/api/subtract';
+                        break;
+                    case '*':
+                        endpoint = '/api/multiply';
+                        break;
+                    case '/':
+                        endpoint = '/api/divide';
+                        break;
+                    default:
+                        return;
+                }
+                
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({number: number})
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    display.value = data.result.toString();
+                } else {
+                    display.value = 'Error';
+                }
+                
+                pendingOperation = null;
+                waitingForNewNumber = true;
+                
+            } catch (error) {
+                console.error('Error calculating:', error);
+                display.value = 'Error';
+            }
+        }
+        
+        // Keyboard support
+        document.addEventListener('keydown', function(event) {
+            const key = event.key;
+            
+            if (key >= '0' && key <= '9' || key === '.') {
+                appendToDisplay(key);
+            } else if (key === '+' || key === '-' || key === '*' || key === '/') {
+                handleOperator(key);
+            } else if (key === 'Enter' || key === '=') {
+                calculate();
+            } else if (key === 'Escape' || key === 'c' || key === 'C') {
+                clearDisplay();
+            } else if (key === 'Backspace') {
+                deleteLast();
+            }
+        });
+    </script>
+</body>
+</html>
