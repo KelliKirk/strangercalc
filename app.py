@@ -109,6 +109,19 @@ def session_info():
         'calculator_id': get_calculator().session_id if 'calc_id' in session else None
     })
 
+@app.route('/api/calculate', methods=['POST'])
+def api_calculate():
+    try:
+        data = request.get_json()
+        first_operand = data['first_operand']
+        second_operand = data['second_operand']
+        operator = data['operator']
+        calc = get_calculator()
+        result = calc.calculate(first_operand, second_operand, operator)
+        return jsonify({'result': result, 'status': 'success'})
+    except Exception as e:
+        return jsonify({'error': str(e), 'status': 'error'}), 400
+
 @app.route('/')
 def index():
     """Serve the main calculator interface"""

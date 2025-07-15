@@ -92,3 +92,36 @@ class Calculator:
                 print(f"Database error: {e}")
                 return []
         return []
+
+    def calculate(self, first_operand, second_operand, operator):
+        from decimal import Decimal, DivisionByZero
+        try:
+            a = Decimal(str(first_operand))
+            b = Decimal(str(second_operand))
+            if operator == '+':
+                result = a + b
+            elif operator == '-':
+                result = a - b
+            elif operator == '*':
+                result = a * b
+            elif operator == '/':
+                if b == 0:
+                    return 'Error!'
+                result = a / b
+            else:
+                return 'Error! Unknown operator!'
+            # Optionally save to history if self.database exists
+            if self.database:
+                try:
+                    self.database.save_calculation(
+                        self.session_id, operator, a, b, result
+                    )
+                    self.database.save_session(self.session_id, result)
+                except Exception as e:
+                    print(f"Database error: {e}")
+            return float(result)
+        except DivisionByZero:
+            return 'Error! Cannot divide by zero!'
+        except Exception as e:
+            print(f"Calculation error: {e}")
+            return 'Error'

@@ -9,112 +9,74 @@
 <body>
     <div class="calculator-container">
         <h1>Hawkins Lab</h1>
-        <input type="text" class="display" id="display" readonly>
+        <input type="text" class="display" id="display" value="0" readonly>
         
         <div class="buttons">
             <button class="clear" onclick="clearDisplay()">C</button>
             <button onclick="deleteLast()">←</button>
             <button class="operator" onclick="handleOperator('/')">/</button>
             <button class="operator" onclick="handleOperator('*')">×</button>
-            
             <button onclick="appendToDisplay('7')">7</button>
             <button onclick="appendToDisplay('8')">8</button>
             <button onclick="appendToDisplay('9')">9</button>
             <button class="operator" onclick="handleOperator('-')">-</button>
-            
             <button onclick="appendToDisplay('4')">4</button>
             <button onclick="appendToDisplay('5')">5</button>
             <button onclick="appendToDisplay('6')">6</button>
             <button class="operator" onclick="handleOperator('+')">+</button>
-            
             <button onclick="appendToDisplay('1')">1</button>
             <button onclick="appendToDisplay('2')">2</button>
             <button onclick="appendToDisplay('3')">3</button>
-            
             <button onclick="appendToDisplay('0')" style="grid-column: span 2;">0</button>
             <button onclick="appendToDisplay('.')">.</button>
-            <button class="equals" onclick="calculate()" style="grid-row: span 2;">=</button>
+            <button class="equals" onclick="calculate()">=</button>
         </div>
     </div>
     
     <script>
         let display = document.getElementById('display');
-        let currentInput = '';
-        let pendingOperation = null;
-        let waitingForNewNumber = false;
-        
-        // Initialize calculator with current result from backend
-        window.onload = async function() {
-            await updateDisplayFromBackend();
-        };
-        
-        // Update display from backend result
-        async function updateDisplayFromBackend() {
-            try {
-                const response = await fetch('/api/result');
-                const data = await response.json();
-                if (data.status === 'success') {
-                    display.value = data.result.toString();
-                }
-            } catch (error) {
-                console.error('Error getting result from backend:', error);
-            }
-        }
-        
-        // Append number or decimal to display
+        let firstOperand = null;
+        let operator = null;
+        let waitingForSecondOperand = false;
+
         function appendToDisplay(value) {
-            if (waitingForNewNumber) {
+            if (display.value === 'Error' || display.value === '0') display.value = '';
+            if (waitingForSecondOperand) {
                 display.value = '';
-                waitingForNewNumber = false;
+                waitingForSecondOperand = false;
             }
-            
-            // Handle decimal point
             if (value === '.') {
                 if (display.value === '' || display.value.includes('.')) {
                     return;
                 }
             }
-            
             display.value += value;
         }
-        
-        // Handle operator buttons
-        async function handleOperator(op) {
-            if (display.value === '' && op !== '-') {
+
+        function handleOperator(nextOperator) {
+            const inputValue = parseFloat(display.value);
+            if (operator && waitingForSecondOperand) {
+                operator = nextOperator;
                 return;
             }
-            
-            // If we have a pending operation, complete it first
-            if (pendingOperation && !waitingForNewNumber) {
-                await calculate();
+            if (firstOperand == null && !isNaN(inputValue)) {
+                firstOperand = inputValue;
+            } else if (operator) {
+                calculate().then(() => {
+                    firstOperand = parseFloat(display.value);
+                });
             }
-            
-            // Handle negative numbers
-            if (op === '-' && display.value === '') {
-                display.value = '-';
-                return;
-            }
-            
-            pendingOperation = op;
-            waitingForNewNumber = true;
+            operator = nextOperator;
+            waitingForSecondOperand = true;
         }
-        
-        // Clear display and reset backend
+
         async function clearDisplay() {
-            try {
-                await fetch('/api/reset', {method: 'POST'});
-                display.value = '';
-                currentInput = '';
-                pendingOperation = null;
-                waitingForNewNumber = false;
-                await updateDisplayFromBackend();
-            } catch (error) {
-                console.error('Error clearing:', error);
-                display.value = 'Error';
-            }
+            display.value = '0';
+            firstOperand = null;
+            operator = null;
+            waitingForSecondOperand = false;
         }
-        
-        // Delete last character
+
         function deleteLast() {
             if (display.value === 'Error') {
                 display.value = '';
@@ -122,67 +84,46 @@
             }
             display.value = display.value.slice(0, -1);
         }
-        
-        // Perform calculation using backend API
+
         async function calculate() {
-            if (!pendingOperation || display.value === '' || waitingForNewNumber) {
+            if (operator == null || waitingForSecondOperand) {
                 return;
             }
-            
-            const number = parseFloat(display.value);
-            if (isNaN(number)) {
+            const secondOperand = parseFloat(display.value);
+            if (isNaN(firstOperand) || isNaN(secondOperand)) {
                 display.value = 'Error';
                 return;
             }
-            
             try {
-                let endpoint;
-                switch (pendingOperation) {
-                    case '+':
-                        endpoint = '/api/add';
-                        break;
-                    case '-':
-                        endpoint = '/api/subtract';
-                        break;
-                    case '*':
-                        endpoint = '/api/multiply';
-                        break;
-                    case '/':
-                        endpoint = '/api/divide';
-                        break;
-                    default:
-                        return;
-                }
-                
-                const response = await fetch(endpoint, {
+                const response = await fetch('/api/calculate', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({number: number})
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        first_operand: firstOperand,
+                        second_operand: secondOperand,
+                        operator: operator
+                    })
                 });
-                
                 const data = await response.json();
-                
                 if (data.status === 'success') {
                     display.value = data.result.toString();
+                    firstOperand = data.result;
                 } else {
                     display.value = 'Error';
+                    firstOperand = null;
                 }
-                
-                pendingOperation = null;
-                waitingForNewNumber = true;
-                
+                operator = null;
+                waitingForSecondOperand = true;
             } catch (error) {
-                console.error('Error calculating:', error);
                 display.value = 'Error';
+                firstOperand = null;
+                operator = null;
+                waitingForSecondOperand = false;
             }
         }
-        
-        // Keyboard support
+
         document.addEventListener('keydown', function(event) {
             const key = event.key;
-            
             if (key >= '0' && key <= '9' || key === '.') {
                 appendToDisplay(key);
             } else if (key === '+' || key === '-' || key === '*' || key === '/') {
