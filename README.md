@@ -78,8 +78,10 @@ Copy `backend/.env.example` to **`.env` in the project root** (same folder as `a
 | `DB_USER`      | Database user                  | `postgres`     |
 | `DB_PASSWORD`  | Database password (required)   | —              |
 | `DB_PORT`      | Port                           | `5432`         |
-| `SECRET_KEY`   | Flask session signing        | long random string |
+| `SECRET_KEY`   | Flask session signing (required) | long random string |
 | `DEBUG`        | Flask debug flag               | `False`        |
+
+`DB_PASSWORD` and `SECRET_KEY` must be set; there are no default secrets in code.
 
 ### 4. Run the application
 
