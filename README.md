@@ -2,6 +2,10 @@
 
 A full-stack web calculator built with **Flask** and **PostgreSQL**. The browser UI sends JSON to a REST API; each operation can be persisted per session so you can audit or extend with history features later.
 
+## About this project
+
+This project was built to practice backend development with Python and Flask, focusing on REST API design, database integration, and session management. It demonstrates my ability to structure a full-stack application, connect a frontend to a backend API, and persist data using PostgreSQL.
+
 ## Features
 
 - **Web UI** — calculator with keyboard support (`templates/`, `static/`)
