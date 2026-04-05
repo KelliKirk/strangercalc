@@ -164,4 +164,7 @@ Do not commit real `.env` files, `docker-compose.yml` with embedded passwords, o
 
 ## Author
 
-Maintained for portfolio and job applications. Replace this section with your name and contact links as you prefer.
+**Kelli Kirk**
+
+- **School / GitHub:** [kelli.kirk@voco.ee](mailto:kelli.kirk@voco.ee)  
+- **Job applications:** [kelkirk93@gmail.com](mailto:kelkirk93@gmail.com)
