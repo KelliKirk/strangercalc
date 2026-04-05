@@ -1,0 +1,44 @@
+# Copy to docker-compose.yml (gitignored) and set secrets in .env — see README.
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: strangercalc_db
+    environment:
+      POSTGRES_DB: strangercalc
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - strangercalc_network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: strangercalc_app
+    environment:
+      DB_HOST: postgres
+      DB_NAME: strangercalc
+      DB_USER: postgres
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env (same as POSTGRES_PASSWORD)}
+      DB_PORT: 5432
+      DEBUG: "false"
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+    networks:
+      - strangercalc_network
+    volumes:
+      - ./logs:/app/logs
+
+volumes:
+  postgres_data:
+
+networks:
+  strangercalc_network:
+    driver: bridge
