@@ -1,0 +1,26 @@
+{
+  "name": "strangercalc",
+  "version": "1.0.0",
+  "description": "A full-stack web calculator built with **Flask** and **PostgreSQL**. The browser UI sends JSON to a REST API; each operation can be persisted per session so you can audit or extend with history features later.",
+  "main": "index.js",
+  "scripts": {
+    "test:ui": "playwright test",
+    "test:ui:headed": "playwright test --headed",
+    "test:ui:report": "playwright show-report"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KelliKirk/strangercalc.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/KelliKirk/strangercalc/issues"
+  },
+  "homepage": "https://github.com/KelliKirk/strangercalc#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "@types/node": "^25.8.0"
+  }
+}

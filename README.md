@@ -13,6 +13,7 @@ This project was built to practice backend development with Python and Flask, fo
 - **REST API** — JSON endpoints for arithmetic, reset, and history
 - **PostgreSQL** — calculations and session snapshots stored via `psycopg2`
 - **Configurable** — database and secrets via environment variables (see [Configuration](#configuration))
+- **UI tests** — end-to-end browser tests with Playwright (see [UI testing](#ui-testing))
 
 ## Tech stack
 
@@ -21,6 +22,7 @@ This project was built to practice backend development with Python and Flask, fo
 | Backend     | Python 3, Flask 3                    |
 | Database    | PostgreSQL 15 (local or Docker)      |
 | Frontend    | HTML, CSS, vanilla JavaScript        |
+| UI testing  | Playwright (`@playwright/test`)      |
 | Packaging   | `venv`, optional Docker / Compose    |
 
 ## Architecture (high level)
@@ -97,6 +99,52 @@ python app.py
 
 Open **http://127.0.0.1:8000** in a browser.
 
+## UI testing
+
+End-to-end UI tests use [Playwright](https://playwright.dev/) to drive the calculator in a real browser. They match three manual test cases (addition, invalid input validation, and UI layout).
+
+### What is covered
+
+| Test case | Playwright test | How it maps to the UI |
+|-----------|-----------------|------------------------|
+| Successful calculation of two numbers | `successful addition of two numbers` | Enters `2 + 3` on the keypad and clicks **=** (the calculate action). Expects display `5`. |
+| Empty / invalid input validation | `shows error when calculation input is invalid` | The app uses a single display instead of two form fields. Invalid input is exercised with `5 ÷ 0`; the display shows `Error!` and the UI stays usable. |
+| Essential UI elements on load | `renders essential UI elements on load` | Checks heading, display, **=** button, layout container, and that `style.css` is loaded. |
+
+Tests live in `tests/calculator.spec.js`. Playwright starts the Flask app automatically via `playwright.config.js` (using `venv` Python on port `8000`).
+
+### Prerequisites
+
+1. Complete [Local setup](#local-setup) (Python venv, PostgreSQL, root `.env` with `DB_PASSWORD` and `SECRET_KEY`).
+2. Install Node dependencies and Playwright browsers:
+
+```bash
+npm install
+npx playwright install
+```
+
+### Run tests
+
+From the repository root:
+
+```bash
+npm run test:ui
+```
+
+Other useful commands:
+
+```bash
+npm run test:ui:headed    # run with a visible browser
+npm run test:ui:report      # open the HTML report after a run
+```
+
+If the app is already running on port `8000`, Playwright reuses it locally (`reuseExistingServer`). In CI, the config starts a fresh server for each run.
+
+### Notes
+
+- UI tests call the real `/api/calculate` endpoint, so PostgreSQL must be reachable with the credentials in `.env`.
+- GitHub Actions runs `npx playwright test` on push/PR; ensure CI has PostgreSQL and the same environment variables if you want those jobs to pass.
+
 ## Docker (optional)
 
 `docker-compose.yml` is **gitignored** so database passwords are never pushed to GitHub. Use the tracked template and a root `.env` file for secrets.
@@ -151,6 +199,10 @@ strangercalc/
 ├── docker-compose.example.yml   # Compose template (no secrets; copy to docker-compose.yml)
 ├── docker.env.example           # Sample vars for Docker Compose `.env`
 ├── init.sql                     # Optional DB init scripts (Compose)
+├── playwright.config.js         # Playwright config (base URL, webServer)
+├── tests/
+│   └── calculator.spec.js       # UI end-to-end tests
+├── package.json                 # Node deps (Playwright)
 ├── static/                # CSS, assets
 ├── templates/             # Jinja2 HTML
 ├── backend/
