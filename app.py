@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify, session, render_template
 from backend.calculator import Calculator
 from backend.database import Database
-from backend.config import SECRET_KEY
+from backend.config import SECRET_KEY, ENABLE_DB
 import uuid
 
 app = Flask(__name__)
@@ -17,7 +17,7 @@ def get_calculator():
     calc_id = session['calc_id']
     
     if calc_id not in calculators:
-        db = Database()
+        db = Database() if ENABLE_DB else None
         calculators[calc_id] = Calculator(database=db)
     
     return calculators[calc_id]
